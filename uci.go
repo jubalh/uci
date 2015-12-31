@@ -148,6 +148,43 @@ func (eng *Engine) SetFEN(fen string) error {
 	return err
 }
 
+// IsLegalMove takes a string in the form of "a2a4" and returns true if it is a legal move
+func (eng *Engine) IsLegalMove(move string) (bool, error) {
+	s := fmt.Sprintf("go depth 1 searchmoves %s\n", move)
+	_, err := eng.stdin.WriteString(s)
+
+	if err != nil {
+		return false, err
+	}
+
+	err = eng.stdin.Flush()
+	if err != nil {
+		return false, err
+	}
+
+	var bestmove string
+	for {
+		line, err := eng.stdout.ReadString('\n')
+		if err != nil {
+			return false, err
+		}
+		line = strings.Trim(line, "\n")
+		if strings.HasPrefix(line, "bestmove") {
+			dummy := ""
+			_, err := fmt.Sscanf(line, "%s %s", &dummy, &bestmove)
+			if err != nil {
+				return false, err
+			}
+			break
+		}
+	}
+
+	if bestmove == "(none)" {
+		return false, nil
+	}
+	return true, nil
+}
+
 // GoDepth takes a depth and an optional uint flag that configures filters
 // for the results being returned.
 func (eng *Engine) GoDepth(depth int, resultOpts ...uint) (*Results, error) {
